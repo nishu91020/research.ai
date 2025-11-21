@@ -1,0 +1,5 @@
+{
+  "name": "Research Agent Pro",
+  "description": "A high-powered research assistant that compiles data from the web using Google Search Grounding.",
+  "requestFramePermissions": []
+}
