@@ -5,6 +5,15 @@ Statistics, Electrical Engineering, and Economics. Performs in-depth analysis le
 various research websites and creates educational content.
 '''
 
+'''
+steps for building a langgraph workflow:
+1. Define the state schema using TypedDict.
+2. Initialize the LLM (AzureChatOpenAI).
+3. Define tools
+5. define each state function as node
+6. build graph - add nodes, edges
+'''
+
 from langgraph.graph import StateGraph, END, START
 from typing import Dict, List, TypedDict
 from langchain_openai import AzureChatOpenAI

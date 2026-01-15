@@ -186,11 +186,6 @@ const App: React.FC = () => {
                     <span className="font-semibold text-zinc-100">Research Buddy</span>
                 </div>
             </div>
-            <div>
-                <a href="#" className="text-zinc-500 hover:text-zinc-300 transition-colors">
-                    <i className="ph ph-gear text-xl"></i>
-                </a>
-            </div>
         </header>
 
         {/* Messages Area */}

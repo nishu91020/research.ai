@@ -14,7 +14,7 @@ import os
 
 # Dynamically import research_agent from the same directory
 spec = importlib.util.spec_from_file_location("research_agent", 
-                                               os.path.join(os.path.dirname(__file__), "research_agent.py"))
+                                               os.path.join(os.path.dirname(__file__), "../agent/research_agent.py"))
 research_agent = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(research_agent)
 
