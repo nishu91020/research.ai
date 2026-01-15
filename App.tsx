@@ -115,7 +115,7 @@ const App: React.FC = () => {
     try {
         console.log("Starting research for:", text);
         const encodedTopic = encodeURIComponent(text);
-        const response = await fetch(`http://0.0.0.0:8000/research/${encodedTopic}`);
+        const response = await fetch(`http://localhost:8000/research/${encodedTopic}`);
         
         if (!response.ok) {
             throw new Error(`Research failed: ${response.statusText}`);

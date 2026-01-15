@@ -1,147 +1,51 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Message, Role, GroundingChunk } from '../types';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MessageBubbleProps {
   message: Message;
 }
 
-const FormattedText: React.FC<{ text: string }> = ({ text }) => {
-  const parseMarkdown = (markdown: string) => {
-    const lines = markdown.split('\n');
-    const elements: React.ReactNode[] = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      
-      // Skip empty lines but add spacing
-      if (line === '') {
-        elements.push(<div key={`space-${i}`} className="h-2" />);
-        continue;
-      }
-
-      // Parse headings (# ## ###)
-      const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
-      if (headingMatch) {
-        const level = headingMatch[1].length;
-        const title = headingMatch[2];
-        const headingClass = {
-          1: 'text-xl font-bold text-white mt-4 mb-2',
-          2: 'text-lg font-semibold text-white mt-3 mb-2',
-          3: 'text-base font-semibold text-zinc-100 mt-2 mb-1'
-        }[level] || 'text-base font-semibold text-zinc-100';
-        
-        elements.push(
-          <div key={`heading-${i}`} className={headingClass}>
-            {title}
-          </div>
-        );
-        continue;
-      }
-
-      // Parse bullet points
-      const bulletMatch = line.match(/^[-•]\s+(.+)$/);
-      if (bulletMatch) {
-        elements.push(
-          <div key={`bullet-${i}`} className="flex gap-3 ml-2 my-1">
-            <span className="text-indigo-400 font-bold mt-0.5">•</span>
-            <span className="text-zinc-200 flex-1">{formatInlineMarkdown(bulletMatch[1])}</span>
-          </div>
-        );
-        continue;
-      }
-
-      // Parse horizontal lines
-      if (line.match(/^[-]{3,}$/)) {
-        elements.push(
-          <div key={`hr-${i}`} className="my-4 border-t border-zinc-700/50" />
-        );
-        continue;
-      }
-
-      // Regular paragraph with inline formatting
-      elements.push(
-        <p key={`para-${i}`} className="text-zinc-200 my-2 leading-relaxed">
-          {formatInlineMarkdown(line)}
-        </p>
-      );
+const cleanAndFormatText = (text: string): string => {
+  console.log(text);
+  // Handle JSON-encoded strings
+  if (text.startsWith('"') && text.endsWith('"')) {
+    try {
+      text = JSON.parse(text);
+    } catch {
+      // Not JSON, use as-is
     }
+  }
+  
+  // Replace escaped newlines and other escape sequences
+  return text
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\r/g, '\r')
+    .replace(/\\\//g, '/')
+    .replace(/\\"/g, '"');
+};
 
-    return elements;
-  };
-
-  const formatInlineMarkdown = (text: string): React.ReactNode => {
-    const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-
-    // Handle **bold**
-    const boldRegex = /\*\*(.+?)\*\*/g;
-    let match;
-
-    // First, handle bold and links together
-    const tokens: Array<{ type: 'text' | 'bold' | 'link' | 'hashtag'; value: string; href?: string }> = [];
-    let tempText = text;
-    let offset = 0;
-
-    // Process bold
-    const boldMatches = Array.from(text.matchAll(/\*\*(.+?)\*\*/g));
-    const linkMatches = Array.from(text.matchAll(/\[(.+?)\]\((.+?)\)/g));
-    const hashtagMatches = Array.from(text.matchAll(/(#\w+)/g));
-
-    // Simple approach: replace markdown markers and format accordingly
-    const segments = text.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\)|#\w+)/);
-
-    return segments.map((segment, idx) => {
-      if (!segment) return null;
-
-      // Bold text
-      if (segment.startsWith('**') && segment.endsWith('**')) {
-        return (
-          <strong key={idx} className="text-white font-semibold">
-            {segment.slice(2, -2)}
-          </strong>
-        );
-      }
-
-      // Links [text](url)
-      const linkMatch = segment.match(/\[(.+?)\]\((.+?)\)/);
-      if (linkMatch) {
-        return (
-          <a
-            key={idx}
-            href={linkMatch[2]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-400 hover:text-indigo-300 underline"
-          >
-            {linkMatch[1]}
-          </a>
-        );
-      }
-
-      // Hashtags
-      if (segment.match(/^#\w+$/)) {
-        return (
-          <span key={idx} className="text-indigo-400 font-medium">
-            {segment}
-          </span>
-        );
-      }
-
-      return <span key={idx}>{segment}</span>;
-    });
-  };
-
-  return (
-    <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-300 space-y-1">
-      {parseMarkdown(text)}
-    </div>
-  );
+const markdownComponents = {
+  h1: (props: any) => <h1 className="text-2xl font-bold text-white mt-6 mb-3" {...props} />,
+  h2: (props: any) => <h2 className="text-xl font-semibold text-white mt-5 mb-2" {...props} />,
+  h3: (props: any) => <h3 className="text-lg font-semibold text-zinc-100 mt-4 mb-2" {...props} />,
+  p: (props: any) => <p className="text-zinc-200 my-2 leading-relaxed" {...props} />,
+  ul: (props: any) => <ul className="list-disc list-inside space-y-1 my-2 ml-2" {...props} />,
+  ol: (props: any) => <ol className="list-decimal list-inside space-y-1 my-2 ml-2" {...props} />,
+  li: (props: any) => <li className="text-zinc-200 ml-2" {...props} />,
+  a: (props: any) => <a className="text-indigo-400 hover:text-indigo-300 underline" target="_blank" rel="noopener noreferrer" {...props} />,
+  strong: (props: any) => <strong className="text-white font-semibold" {...props} />,
+  em: (props: any) => <em className="text-zinc-300 italic" {...props} />,
+  code: (props: any) => <code className="bg-zinc-800 px-2 py-1 rounded text-xs text-zinc-100 font-mono" {...props} />,
+  pre: (props: any) => <pre className="bg-zinc-900 p-3 rounded my-2 overflow-x-auto text-xs" {...props} />,
+  blockquote: (props: any) => <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-zinc-300 my-2" {...props} />,
+  hr: (props: any) => <hr className="my-4 border-t border-zinc-700/50" {...props} />,
 };
 
 const SourcesList: React.FC<{ chunks: GroundingChunk[] }> = ({ chunks }) => {
-  // Filter out chunks that don't have web URIs
   const sources = chunks.filter(c => c.web?.uri);
-
   if (sources.length === 0) return null;
 
   return (
@@ -175,7 +79,9 @@ const SourcesList: React.FC<{ chunks: GroundingChunk[] }> = ({ chunks }) => {
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   const isUser = message.role === Role.USER;
-
+  useEffect(()=>{
+    console.log("Rendering message:", message.text);
+  },[message.text])
   return (
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-4xl w-full gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -206,7 +112,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 : 'bg-gradient-to-b from-zinc-900 to-zinc-900/95 text-zinc-100 rounded-tl-none border border-zinc-800/60'
             }`}>
                 {message.text ? (
-                    <FormattedText text={message.text} />
+                    <div className="prose prose-invert max-w-none">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]} 
+                        components={markdownComponents}
+                      >
+                          {cleanAndFormatText(message.text)}
+                      </ReactMarkdown>
+                    </div>
                 ) : (
                     // Loading Pulse
                     <div className="flex items-center gap-1 h-6">

@@ -115,7 +115,7 @@ async def research_endpoint(topic: str):
             }) + "\n"
             
             # Stream the article in chunks
-            article = result.get("article", "")
+            article = json.loads(result.get("article", []))[0].get("content",[])[0].get("text","")
             chunk_size = 100
             for i in range(0, len(article), chunk_size):
                 yield json.dumps({
@@ -127,7 +127,7 @@ async def research_endpoint(topic: str):
             # Stream the summary
             yield json.dumps({
                 "type": "summary",
-                "text": result.get("summary", "")
+                "text": json.loads(result.get("summary", []))[0].get("content",[])[0].get("text","")
             }) + "\n"
             
             yield json.dumps({"type": "complete"}) + "\n"
