@@ -4,13 +4,21 @@ This module provides REST API endpoints for the Research Scholar Agent,
 allowing external applications to request research on specific topics.
 """
 
+import json
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Dynamically import research_agent from the same directory
 spec = importlib.util.spec_from_file_location("research_agent", 
@@ -26,8 +34,10 @@ class ResearchResponse(BaseModel):
     """Response model for research results"""
     topic: str
     field: str
-    article: str
+    fetched_data: dict
+    selected_artices: list
     summary: str
+    article: str
 
 class ErrorResponse(BaseModel):
     """Response model for errors"""
@@ -42,6 +52,15 @@ app = FastAPI(
     description="API for AI-powered research on various topics across multiple disciplines"
 )
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins; restrict in production to specific domain
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
+
 # ==================== Endpoints ====================
 
 @app.get("/health")
@@ -49,22 +68,24 @@ async def health_check():
     """Health check endpoint to verify service is running"""
     return {"status": "ok", "service": "Research Scholar Agent API"}
 
-@app.get("/research/{topic}", response_model=ResearchResponse)
+@app.get("/research/{topic}")
 async def research_endpoint(topic: str):
     """
-    Research a topic using the AI Research Scholar Agent
+    Research a topic using the AI Research Scholar Agent with streaming response.
     
     This endpoint performs in-depth analysis leveraging various research websites
-    and returns a comprehensive article with summary.
+    and streams the comprehensive article with summary.
     
     Args:
         topic: The topic to research (e.g., "AI in medicine", "quantum computing")
         
     Returns:
-        ResearchResponse containing:
+        StreamingResponse yielding JSON chunks containing:
         - topic: The researched topic
         - field: Classified field/discipline
-        - article: Full drafted article with headings and hashtags
+        - fetched_data: Research data chunks
+        - selected_articles: Article sources
+        - article: Full drafted article (streamed)
         - summary: Key findings summary
         
     Raises:
@@ -76,23 +97,52 @@ async def research_endpoint(topic: str):
     if not topic or len(topic.strip()) == 0:
         raise HTTPException(status_code=400, detail="Topic cannot be empty")
     
-    try:
-        # Run the research workflow in a thread pool to avoid blocking
-        executor = ThreadPoolExecutor(max_workers=1)
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(executor, run_research, topic)
-        
-        return ResearchResponse(
-            topic=topic,
-            field=result.get("field", ""),
-            article=result.get("article", ""),
-            summary=result.get("summary", "")
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error during research: {str(e)}"
-        )
+    async def stream_research():
+        try:
+            executor = ThreadPoolExecutor(max_workers=1)
+            loop = asyncio.get_event_loop()
+            
+            # Run the research workflow
+            result = await loop.run_in_executor(executor, run_research, topic)
+            
+            # Stream the response chunks
+            yield json.dumps({
+                "type": "metadata",
+                "topic": topic,
+                "field": result.get("field", ""),
+                "fetched_data": result.get("fetched_data", {}),
+                "selected_articles": result.get("selected_articles", [])
+            }) + "\n"
+            
+            # Stream the article in chunks
+            article = result.get("article", "")
+            chunk_size = 100
+            for i in range(0, len(article), chunk_size):
+                yield json.dumps({
+                    "type": "article",
+                    "text": article[i:i + chunk_size]
+                }) + "\n"
+                await asyncio.sleep(0)  # Allow other tasks to run
+            
+            # Stream the summary
+            yield json.dumps({
+                "type": "summary",
+                "text": result.get("summary", "")
+            }) + "\n"
+            
+            yield json.dumps({"type": "complete"}) + "\n"
+            
+        except Exception as e:
+            logger.error(f"Error during research for topic '{topic}': {str(e)}", exc_info=True)
+            yield json.dumps({
+                "type": "error",
+                "message": f"Error during research: {str(e)}"
+            }) + "\n"
+    
+    return StreamingResponse(
+        stream_research(),
+        media_type="application/x-ndjson"  # Newline-delimited JSON
+    )
 
 # ==================== Main ====================
 

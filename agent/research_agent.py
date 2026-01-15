@@ -16,7 +16,6 @@ steps for building a langgraph workflow:
 
 from langgraph.graph import StateGraph, END, START
 from typing import Dict, List, TypedDict
-from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.tools import tool
 import requests
@@ -24,13 +23,15 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 import os
 from dotenv import load_dotenv
+import sys
+
+# Add parent directory to path to import services
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from services.azure_responses_api import ResponsesAPIChatModel
 
 # Load environment variables from .env.local
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.local'))
-
-AZURE_OPENAI_ENDPOINT = os.getenv('AZURE_OPENAI_ENDPOINT')
-AZURE_OPENAI_KEY = os.getenv('AZURE_OPENAI_KEY')
-AZURE_API_VERSION = os.getenv('AZURE_API_VERSION')
 
 # Define state
 class AgentState(TypedDict):
@@ -41,12 +42,8 @@ class AgentState(TypedDict):
     summary: str
     article: str
 
-# Initialize LLM
-llm = AzureChatOpenAI(
-    api_version=AZURE_API_VERSION,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT,
-    api_key=AZURE_OPENAI_KEY,
-)
+# Initialize LLM with the Responses API client
+llm = ResponsesAPIChatModel(model="gpt-4.1")
 
 # ==================== Tools ====================
 
@@ -256,6 +253,7 @@ def classify_field(state: AgentState) -> AgentState:
 
 # 2 & 3. Fetch data
 def fetch_data(state: AgentState) -> AgentState:
+    print(f"Fetching data for field: {state['field']}")
     field = state.get("field", "").lower()
     if any(x in field for x in ["medicine", "health sciences", "biology", "life sciences", "biomedical"]):
         state["fetched_data"] = medicine_bio_lifescience_research.invoke({"topic": state["topic"]})
@@ -267,7 +265,7 @@ def fetch_data(state: AgentState) -> AgentState:
 
 # 4. Select relevant articles
 select_prompt = ChatPromptTemplate.from_template(
-    "From these articles: {articles}\nSelect the top 3 most relevant to '{topic}'. Output as JSON list: [{title, url, reason}]"
+    "From these articles: {articles}\nSelect the top 3 most relevant to '{topic}'. Output as JSON list: [{{title, url, reason}}]"
 )
 select_chain = select_prompt | llm
 
@@ -330,6 +328,7 @@ graph = build_research_graph()
 
 def run_research(topic: str) -> dict:
     """Run the research workflow for a given topic"""
+    print(f"Running research for topic: {topic}")
     initial_state = {
         "topic": topic,
         "field": "",

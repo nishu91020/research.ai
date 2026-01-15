@@ -6,26 +6,134 @@ interface MessageBubbleProps {
 }
 
 const FormattedText: React.FC<{ text: string }> = ({ text }) => {
-  // Simple parser to handle newlines and basic bolding for lack of a full MD library
-  // In a real production app, use 'react-markdown'
-  return (
-    <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-300">
-      {text.split('\n').map((line, i) => {
-        if (line.trim() === '') return <br key={i} className="h-2 block" />;
+  const parseMarkdown = (markdown: string) => {
+    const lines = markdown.split('\n');
+    const elements: React.ReactNode[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Skip empty lines but add spacing
+      if (line === '') {
+        elements.push(<div key={`space-${i}`} className="h-2" />);
+        continue;
+      }
+
+      // Parse headings (# ## ###)
+      const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const title = headingMatch[2];
+        const headingClass = {
+          1: 'text-xl font-bold text-white mt-4 mb-2',
+          2: 'text-lg font-semibold text-white mt-3 mb-2',
+          3: 'text-base font-semibold text-zinc-100 mt-2 mb-1'
+        }[level] || 'text-base font-semibold text-zinc-100';
         
-        // Basic bold parsing (**text**)
-        const parts = line.split(/(\*\*.*?\*\*)/g);
-        return (
-          <div key={i} className="min-h-[1.5em]">
-            {parts.map((part, j) => {
-              if (part.startsWith('**') && part.endsWith('**')) {
-                return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
-              }
-              return <span key={j}>{part}</span>;
-            })}
+        elements.push(
+          <div key={`heading-${i}`} className={headingClass}>
+            {title}
           </div>
         );
-      })}
+        continue;
+      }
+
+      // Parse bullet points
+      const bulletMatch = line.match(/^[-•]\s+(.+)$/);
+      if (bulletMatch) {
+        elements.push(
+          <div key={`bullet-${i}`} className="flex gap-3 ml-2 my-1">
+            <span className="text-indigo-400 font-bold mt-0.5">•</span>
+            <span className="text-zinc-200 flex-1">{formatInlineMarkdown(bulletMatch[1])}</span>
+          </div>
+        );
+        continue;
+      }
+
+      // Parse horizontal lines
+      if (line.match(/^[-]{3,}$/)) {
+        elements.push(
+          <div key={`hr-${i}`} className="my-4 border-t border-zinc-700/50" />
+        );
+        continue;
+      }
+
+      // Regular paragraph with inline formatting
+      elements.push(
+        <p key={`para-${i}`} className="text-zinc-200 my-2 leading-relaxed">
+          {formatInlineMarkdown(line)}
+        </p>
+      );
+    }
+
+    return elements;
+  };
+
+  const formatInlineMarkdown = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    // Handle **bold**
+    const boldRegex = /\*\*(.+?)\*\*/g;
+    let match;
+
+    // First, handle bold and links together
+    const tokens: Array<{ type: 'text' | 'bold' | 'link' | 'hashtag'; value: string; href?: string }> = [];
+    let tempText = text;
+    let offset = 0;
+
+    // Process bold
+    const boldMatches = Array.from(text.matchAll(/\*\*(.+?)\*\*/g));
+    const linkMatches = Array.from(text.matchAll(/\[(.+?)\]\((.+?)\)/g));
+    const hashtagMatches = Array.from(text.matchAll(/(#\w+)/g));
+
+    // Simple approach: replace markdown markers and format accordingly
+    const segments = text.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\)|#\w+)/);
+
+    return segments.map((segment, idx) => {
+      if (!segment) return null;
+
+      // Bold text
+      if (segment.startsWith('**') && segment.endsWith('**')) {
+        return (
+          <strong key={idx} className="text-white font-semibold">
+            {segment.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      // Links [text](url)
+      const linkMatch = segment.match(/\[(.+?)\]\((.+?)\)/);
+      if (linkMatch) {
+        return (
+          <a
+            key={idx}
+            href={linkMatch[2]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-400 hover:text-indigo-300 underline"
+          >
+            {linkMatch[1]}
+          </a>
+        );
+      }
+
+      // Hashtags
+      if (segment.match(/^#\w+$/)) {
+        return (
+          <span key={idx} className="text-indigo-400 font-medium">
+            {segment}
+          </span>
+        );
+      }
+
+      return <span key={idx}>{segment}</span>;
+    });
+  };
+
+  return (
+    <div className="prose prose-invert prose-sm max-w-none leading-relaxed text-zinc-300 space-y-1">
+      {parseMarkdown(text)}
     </div>
   );
 };

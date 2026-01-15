@@ -2,11 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { MessageBubble } from './components/MessageBubble';
 import { ChatInput } from './components/ChatInput';
-import { geminiService } from './services/geminiService';
 import { ChatSession, Message, Role, ChatState } from './types';
 import { v4 as uuidv4 } from 'uuid'; 
 
-const generateId = () => new uuidv4();
+const generateId = () => uuidv4();
 
 const App: React.FC = () => {
   const [chatState, setChatState] = useState<ChatState>({
@@ -59,8 +58,6 @@ const App: React.FC = () => {
       messages: [],
       createdAt: Date.now(),
     };
-    
-    geminiService.resetSession();
 
     setChatState(prev => ({
       ...prev,
@@ -116,33 +113,144 @@ const App: React.FC = () => {
     }));
 
     try {
-        const currentHistory = chatState.sessions.find(s => s.id === sessionId)?.messages || [];
+        console.log("Starting research for:", text);
+        const encodedTopic = encodeURIComponent(text);
+        const response = await fetch(`http://0.0.0.0:8000/research/${encodedTopic}`);
         
-        const stream = geminiService.streamMessage(text, currentHistory);
+        if (!response.ok) {
+            throw new Error(`Research failed: ${response.statusText}`);
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
         
-        for await (const chunk of stream) {
-            setChatState(prev => ({
-                ...prev,
-                sessions: prev.sessions.map(s => {
-                    if (s.id === sessionId) {
-                        const msgs = s.messages.map(m => {
-                            if (m.id === agentMsgId) {
-                                return {
-                                    ...m,
-                                    text: chunk.text,
-                                    groundingMetadata: chunk.groundingMetadata || m.groundingMetadata
-                                };
-                            }
-                            return m;
-                        });
-                        return { ...s, messages: msgs };
+        if (!reader) {
+            throw new Error("No response body");
+        }
+
+        let buffer = "";
+        let collectedText = "";
+        let metadata: any = {};
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines[lines.length - 1];
+
+            for (let i = 0; i < lines.length - 1; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                try {
+                    const chunk = JSON.parse(line);
+
+                    if (chunk.type === "metadata") {
+                        // Store metadata
+                        metadata = {
+                            field: chunk.field,
+                            fetched_data: chunk.fetched_data,
+                            selected_articles: chunk.selected_articles
+                        };
+                    } else if (chunk.type === "article") {
+                        // Stream article text
+                        collectedText += chunk.text;
+                        setChatState(prev => ({
+                            ...prev,
+                            sessions: prev.sessions.map(s => {
+                                if (s.id === sessionId) {
+                                    const msgs = s.messages.map(m => {
+                                        if (m.id === agentMsgId) {
+                                            return {
+                                                ...m,
+                                                text: collectedText,
+                                                groundingMetadata: metadata
+                                            };
+                                        }
+                                        return m;
+                                    });
+                                    return { ...s, messages: msgs };
+                                }
+                                return s;
+                            })
+                        }));
+                    } else if (chunk.type === "summary") {
+                        // Append summary with clear separation
+                        collectedText += "\n\n---\n\n## Summary\n\n" + chunk.text;
+                        setChatState(prev => ({
+                            ...prev,
+                            sessions: prev.sessions.map(s => {
+                                if (s.id === sessionId) {
+                                    const msgs = s.messages.map(m => {
+                                        if (m.id === agentMsgId) {
+                                            return {
+                                                ...m,
+                                                text: collectedText,
+                                                groundingMetadata: metadata
+                                            };
+                                        }
+                                        return m;
+                                    });
+                                    return { ...s, messages: msgs };
+                                }
+                                return s;
+                            })
+                        }));
+                    } else if (chunk.type === "error") {
+                        throw new Error(chunk.message);
+                    } else if (chunk.type === "complete") {
+                        // Response complete, update final state
+                        setChatState(prev => ({
+                            ...prev,
+                            sessions: prev.sessions.map(s => {
+                                if (s.id === sessionId) {
+                                    const msgs = s.messages.map(m => {
+                                        if (m.id === agentMsgId) {
+                                            return {
+                                                ...m,
+                                                isStreaming: false,
+                                                groundingMetadata: metadata
+                                            };
+                                        }
+                                        return m;
+                                    });
+                                    return { ...s, messages: msgs };
+                                }
+                                return s;
+                            })
+                        }));
                     }
-                    return s;
-                })
-            }));
+                } catch (e) {
+                    if (e instanceof SyntaxError) {
+                        console.error("Error parsing JSON chunk:", line);
+                    } else {
+                        console.error("Error processing chunk:", e);
+                    }
+                }
+            }
         }
     } catch (e) {
         console.error(e);
+        setChatState(prev => ({
+            ...prev,
+            sessions: prev.sessions.map(s => {
+                if (s.id === sessionId) {
+                    const msgs = s.messages.map(m => {
+                        if (m.id === agentMsgId) {
+                            return {
+                                ...m,
+                                text: `Error: ${e instanceof Error ? e.message : String(e)}`
+                            };
+                        }
+                        return m;
+                    });
+                    return { ...s, messages: msgs };
+                }
+                return s;
+            })
+        }));
     } finally {
         setIsGenerating(false);
         setChatState(prev => ({
@@ -165,7 +273,6 @@ const App: React.FC = () => {
         activeSessionId={chatState.activeSessionId}
         onSelectSession={(id) => {
             setChatState(prev => ({ ...prev, activeSessionId: id }));
-            geminiService.resetSession(); 
         }}
         onNewChat={createNewSession}
         isOpen={chatState.isSidebarOpen}
