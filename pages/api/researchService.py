@@ -21,12 +21,18 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Dynamically import research_agent from the same directory
-spec = importlib.util.spec_from_file_location("research_agent", 
-                                               os.path.join(os.path.dirname(__file__), "../agent/research_agent.py"))
-research_agent = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(research_agent)
-
-run_research = research_agent.run_research
+try:
+    spec = importlib.util.spec_from_file_location("research_agent", 
+                                                   os.path.join(os.path.dirname(__file__), "../agent/research_agent.py"))
+    if spec is None or spec.loader is None:
+        raise ImportError("Could not load research_agent module")
+    research_agent = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(research_agent)
+    run_research = research_agent.run_research
+    logger.info("Successfully loaded research_agent module")
+except Exception as e:
+    logger.error(f"Failed to import research_agent: {str(e)}", exc_info=True)
+    raise
 
 # ==================== Pydantic Models ====================
 
@@ -55,9 +61,17 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://researchai-vert.vercel.app"],
+    allow_origins=[
+        "https://researchai-vert.vercel.app",
+        "https://research-dbrz60ig4-nishu91020s-projects.vercel.app",
+        "https://*.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
     allow_headers=["*"],  # Allow all headers
 )
 

@@ -9,11 +9,16 @@ import json
 from dotenv import load_dotenv
 from langchain_core.runnables import Runnable
 
-# Load environment variables
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.local'))
+# Load environment variables - only load from file if it exists (local dev)
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env.local')
+if os.path.exists(env_path):
+    load_dotenv(env_path)
 
 AZURE_OPENAI_ENDPOINT = os.getenv('AZURE_OPENAI_ENDPOINT')
 AZURE_OPENAI_KEY = os.getenv('AZURE_OPENAI_KEY')
+
+if not AZURE_OPENAI_ENDPOINT or not AZURE_OPENAI_KEY:
+    raise ValueError("Azure OpenAI credentials not found. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY environment variables.")
 
 
 class AzureResponsesAPIClient:
