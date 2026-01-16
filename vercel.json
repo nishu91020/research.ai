@@ -1,5 +1,4 @@
 {
-  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "env": {
@@ -7,24 +6,10 @@
     "AZURE_OPENAI_ENDPOINT": "https://researchagentpro.openai.azure.com/",
     "AZURE_OPENAI_KEY": "asdasdasdasdadasdasd"
   },
-  "regions": ["iad1"],
-  "functions": {
-    "pages/api/**/*.py": {
-      "runtime": "python@3.9",
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/pages/api/$1"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/index.html"
+      "destination": "/api/$1"
     }
   ]
 }
