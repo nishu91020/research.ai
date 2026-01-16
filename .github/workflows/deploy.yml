@@ -16,11 +16,11 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
+    # Environment name is OK, but URL must NOT reference steps
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
-      url: ${{ steps.deploy.outputs['deployment-url'] }}
 
-    
     permissions:
       contents: read
       deployments: write
@@ -36,13 +36,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: npm
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-          cache: 'pip'
+          cache: pip
 
       - name: Install dependencies
         run: |
@@ -58,49 +58,7 @@ jobs:
       - name: Deploy to Vercel
         id: deploy
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             DEPLOYMENT_URL=$(vercel deploy --token ${{ secrets.VERCEL_TOKEN }} --confirm)
           else
-            if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-              DEPLOYMENT_URL=$(vercel deploy --prod --token ${{ secrets.VERCEL_TOKEN }} --confirm)
-            else
-              DEPLOYMENT_URL=$(vercel deploy --token ${{ secrets.VERCEL_TOKEN }} --confirm)
-            fi
-          fi
-          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-
-      - name: Comment PR with deployment URL
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🚀 Preview deployment ready!\n\n[View Preview](${{ steps.deploy.outputs.deployment-url }})`
-            })
-
-      - name: Create deployment
-        if: github.event_name == 'push'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const deployment = await github.rest.repos.createDeployment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: context.ref,
-              environment: '${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}',
-              required_contexts: [],
-              auto_merge: false,
-              production_environment: ${{ github.ref == 'refs/heads/main' }}
-            });
-
-            await github.rest.repos.createDeploymentStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              deployment_id: deployment.data.id,
-              state: 'success',
-              environment_url: '${{ steps.deploy.outputs['deployment-url'] }}'
-            });
-
+            if [ "${{ github.ref }}"]()
