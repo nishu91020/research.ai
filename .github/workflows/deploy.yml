@@ -17,8 +17,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
-      url: ${{ steps.deploy.outputs.deployment-url }}
+      name: ${{ github.ref == 'refs/heads/main' ? 'production' : 'preview' }}
+      url: ${{ steps.deploy.outputs['deployment-url'] }}
+
     
     permissions:
       contents: read
@@ -89,7 +90,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: context.ref,
-              environment: '${{ github.ref == "refs/heads/main" && "production" || "preview" }}',
+              environment: '${{ github.ref == "refs/heads/main" ? "production" : "preview" }}',
               required_contexts: [],
               auto_merge: false,
               production_environment: ${{ github.ref == 'refs/heads/main' }}
