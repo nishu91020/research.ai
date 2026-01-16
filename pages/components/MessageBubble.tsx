@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Message, Role, GroundingChunk } from '../types';
+import { Message, Role, GroundingChunk } from '../../types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
