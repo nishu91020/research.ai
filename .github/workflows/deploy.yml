@@ -59,15 +59,16 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             echo "Deploying preview..."
-            DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --confirm 2>&1)
+            DEPLOYMENT_URL=$(vercel --token=$VERCEL_TOKEN --yes)
           elif [ "${{ github.ref }}" == "refs/heads/main" ] || [ "${{ github.ref }}" == "refs/heads/master" ]; then
             echo "Deploying to production..."
-            DEPLOYMENT_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --confirm 2>&1)
+            DEPLOYMENT_URL=$(vercel --prod --token=$VERCEL_TOKEN --yes)
           else
             echo "Deploying preview..."
-            DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --confirm 2>&1)
+            DEPLOYMENT_URL=$(vercel --token=$VERCEL_TOKEN --yes)
           fi
           echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
 
       - name: Comment PR with deployment
         if: github.event_name == 'pull_request'
