@@ -18,4 +18,4 @@ npm run build
 echo "🐍 Verifying Python setup..."
 python3 -m pip install -q -r requirements.txt
 
-echo "✅ Build completed successfully!"
+echo "✅ Build completed successfully!!"
