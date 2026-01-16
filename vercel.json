@@ -1,11 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "env": {
-    "GEMINI_API_KEY": "asdasdasdasdadasdasd",
-    "AZURE_OPENAI_ENDPOINT": "https://researchagentpro.openai.azure.com/",
-    "AZURE_OPENAI_KEY": "asdasdasdasdadasdasd"
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
