@@ -1,5 +1,5 @@
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
-import { Message, Role } from "../types";
+import { Message, Role } from "../../types";
 
 // Initialize the client with the environment key
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });

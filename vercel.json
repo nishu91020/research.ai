@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "env": [
+    "GEMINI_API_KEY",
+    "AZURE_OPENAI_ENDPOINT",
+    "AZURE_OPENAI_KEY"
+  ],
+  "envPrefix": "",
+  "regions": ["iad1"],
+  "functions": {
+    "pages/api/**/*.py": {
+      "runtime": "python3.9",
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/pages/api/$1"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ]
+}
