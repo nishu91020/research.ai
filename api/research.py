@@ -46,7 +46,7 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "service": "Research Scholar Agent API"}
 
-@app.get("/api/research/{topic}")
+@app.get("/research/{topic}")
 async def research_endpoint(topic: str):
     """Research endpoint with streaming response"""
     if not run_research:
