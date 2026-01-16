@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { MessageBubble } from './components/MessageBubble';
-import { ChatInput } from './components/ChatInput';
+import { Sidebar } from './pages/components/Sidebar';
+import { MessageBubble } from './pages/components/MessageBubble';
+import { ChatInput } from './pages/components/ChatInput';
 import { ChatSession, Message, Role, ChatState } from './types';
 import { v4 as uuidv4 } from 'uuid'; 
 
