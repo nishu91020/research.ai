@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
+      - master
       - develop
   pull_request:
     branches:
       - main
+      - master
       - develop
 
 env:
@@ -58,7 +60,7 @@ jobs:
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             echo "Deploying preview..."
             DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --confirm 2>&1)
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          elif [ "${{ github.ref }}" == "refs/heads/main" ] || [ "${{ github.ref }}" == "refs/heads/master" ]; then
             echo "Deploying to production..."
             DEPLOYMENT_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --confirm 2>&1)
           else
