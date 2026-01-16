@@ -2,12 +2,17 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "env": [
-    "GEMINI_API_KEY",
-    "AZURE_OPENAI_ENDPOINT",
-    "AZURE_OPENAI_KEY"
-  ],
-  "envPrefix": "",
+  "env": {
+    "GEMINI_API_KEY": {
+      "description": "Google Gemini API key for AI services"
+    },
+    "AZURE_OPENAI_ENDPOINT": {
+      "description": "Azure OpenAI endpoint URL"
+    },
+    "AZURE_OPENAI_KEY": {
+      "description": "Azure OpenAI API key"
+    }
+  },
   "regions": ["iad1"],
   "functions": {
     "pages/api/**/*.py": {
