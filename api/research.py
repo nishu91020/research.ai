@@ -10,6 +10,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
+import traceback
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -34,12 +35,34 @@ app.add_middleware(
 )
 
 # Import research function with error handling
+run_research = None
+import_error = None
+
 try:
+    logger.info(f"Python path: {sys.path}")
+    logger.info(f"Current directory: {os.getcwd()}")
+    logger.info(f"Files in parent: {os.listdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))}")
+    
     from pages.agent.research_agent import run_research
     logger.info("Successfully imported run_research")
 except Exception as e:
-    logger.error(f"Failed to import run_research: {str(e)}", exc_info=True)
-    run_research = None
+    import_error = f"{str(e)}\n{traceback.format_exc()}"
+    logger.error(f"Failed to import run_research: {import_error}")
+
+@app.get("/")
+async def root():
+    """Root endpoint for debugging"""
+    return {
+        "status": "ok", 
+        "message": "Research Agent API",
+        "import_status": "success" if run_research else "failed",
+        "import_error": import_error,
+        "cwd": os.getcwd(),
+        "env_vars": {
+            "AZURE_OPENAI_ENDPOINT": "set" if os.getenv("AZURE_OPENAI_ENDPOINT") else "not set",
+            "AZURE_OPENAI_KEY": "set" if os.getenv("AZURE_OPENAI_KEY") else "not set"
+        }
+    }
 
 @app.get("/health")
 async def health_check():
@@ -49,6 +72,14 @@ async def health_check():
 @app.get("/research/{topic}")
 async def research_endpoint(topic: str):
     """Research endpoint with streaming response"""
+    
+    if import_error:
+        logger.error(f"Cannot process request due to import error: {import_error}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Research agent initialization failed: {import_error}"
+        )
+    
     if not run_research:
         raise HTTPException(status_code=500, detail="Research agent not initialized")
     
@@ -60,8 +91,12 @@ async def research_endpoint(topic: str):
             executor = ThreadPoolExecutor(max_workers=1)
             loop = asyncio.get_event_loop()
             
+            logger.info(f"Starting research for topic: {topic}")
+            
             # Run the research workflow
             result = await loop.run_in_executor(executor, run_research, topic)
+            
+            logger.info(f"Research completed for topic: {topic}")
             
             # Stream the response chunks
             yield json.dumps({
@@ -91,7 +126,8 @@ async def research_endpoint(topic: str):
             yield json.dumps({"type": "complete"}) + "\n"
             
         except Exception as e:
-            logger.error(f"Error during research for topic '{topic}': {str(e)}", exc_info=True)
+            error_detail = f"{str(e)}\n{traceback.format_exc()}"
+            logger.error(f"Error during research for topic '{topic}': {error_detail}")
             yield json.dumps({
                 "type": "error",
                 "message": f"Error during research: {str(e)}"
@@ -101,11 +137,6 @@ async def research_endpoint(topic: str):
         stream_research(),
         media_type="application/x-ndjson"
     )
-
-# Health endpoint at root for Vercel
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "Research Agent API is running"}
 
 # Vercel handler
 handler = app
