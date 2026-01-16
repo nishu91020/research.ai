@@ -115,7 +115,9 @@ const App: React.FC = () => {
     try {
         console.log("Starting research for:", text);
         const encodedTopic = encodeURIComponent(text);
-        const response = await fetch(`http://localhost:8000/research/${encodedTopic}`);
+        // Use /api for production (relative path works on Vercel)
+        const apiBaseUrl = '/api';
+        const response = await fetch(`${apiBaseUrl}/research/${encodedTopic}`);
         
         if (!response.ok) {
             throw new Error(`Research failed: ${response.statusText}`);
