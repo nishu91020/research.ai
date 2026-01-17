@@ -123,116 +123,41 @@ const App: React.FC = () => {
             throw new Error(`Research failed: ${response.statusText}`);
         }
 
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
+        // Parse the complete JSON response
+        const data = await response.json();
         
-        if (!reader) {
-            throw new Error("No response body");
+        if (data.error) {
+            throw new Error(data.detail || data.error);
         }
 
-        let buffer = "";
-        let collectedText = "";
-        let metadata: any = {};
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines[lines.length - 1];
-
-            for (let i = 0; i < lines.length - 1; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-
-                try {
-                    const chunk = JSON.parse(line);
-
-                    if (chunk.type === "metadata") {
-                        // Store metadata
-                        metadata = {
-                            field: chunk.field,
-                            fetched_data: chunk.fetched_data,
-                            selected_articles: chunk.selected_articles
-                        };
-                    } else if (chunk.type === "article") {
-                        // Stream article text
-                        collectedText += chunk.text;
-                        setChatState(prev => ({
-                            ...prev,
-                            sessions: prev.sessions.map(s => {
-                                if (s.id === sessionId) {
-                                    const msgs = s.messages.map(m => {
-                                        if (m.id === agentMsgId) {
-                                            return {
-                                                ...m,
-                                                text: collectedText,
-                                                groundingMetadata: metadata
-                                            };
-                                        }
-                                        return m;
-                                    });
-                                    return { ...s, messages: msgs };
+        // Combine article and summary
+        const fullText = data.article + "\n\n---\n\n## Summary\n\n" + data.summary;
+        
+        // Update the message with complete response
+        setChatState(prev => ({
+            ...prev,
+            sessions: prev.sessions.map(s => {
+                if (s.id === sessionId) {
+                    const msgs = s.messages.map(m => {
+                        if (m.id === agentMsgId) {
+                            return {
+                                ...m,
+                                text: fullText,
+                                isStreaming: false,
+                                groundingMetadata: {
+                                    field: data.field,
+                                    fetched_data: data.fetched_data,
+                                    selected_articles: data.selected_articles
                                 }
-                                return s;
-                            })
-                        }));
-                    } else if (chunk.type === "summary") {
-                        // Append summary with clear separation
-                        collectedText += "\n\n---\n\n## Summary\n\n" + chunk.text;
-                        setChatState(prev => ({
-                            ...prev,
-                            sessions: prev.sessions.map(s => {
-                                if (s.id === sessionId) {
-                                    const msgs = s.messages.map(m => {
-                                        if (m.id === agentMsgId) {
-                                            return {
-                                                ...m,
-                                                text: collectedText,
-                                                groundingMetadata: metadata
-                                            };
-                                        }
-                                        return m;
-                                    });
-                                    return { ...s, messages: msgs };
-                                }
-                                return s;
-                            })
-                        }));
-                    } else if (chunk.type === "error") {
-                        throw new Error(chunk.message);
-                    } else if (chunk.type === "complete") {
-                        // Response complete, update final state
-                        setChatState(prev => ({
-                            ...prev,
-                            sessions: prev.sessions.map(s => {
-                                if (s.id === sessionId) {
-                                    const msgs = s.messages.map(m => {
-                                        if (m.id === agentMsgId) {
-                                            return {
-                                                ...m,
-                                                isStreaming: false,
-                                                groundingMetadata: metadata
-                                            };
-                                        }
-                                        return m;
-                                    });
-                                    return { ...s, messages: msgs };
-                                }
-                                return s;
-                            })
-                        }));
-                    }
-                } catch (e) {
-                    if (e instanceof SyntaxError) {
-                        console.error("Error parsing JSON chunk:", line);
-                    } else {
-                        console.error("Error processing chunk:", e);
-                    }
+                            };
+                        }
+                        return m;
+                    });
+                    return { ...s, messages: msgs };
                 }
-            }
-        }
+                return s;
+            })
+        }));
     } catch (e) {
         console.error(e);
         setChatState(prev => ({
