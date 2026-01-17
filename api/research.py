@@ -23,10 +23,16 @@ import_error = None
 try:
     logger.info(f"Python path: {sys.path}")
     logger.info(f"Current directory: {os.getcwd()}")
-    logger.info(f"Files in parent: {os.listdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))}")
     
-    from pages.agent.research_agent import run_research
-    logger.info("Successfully imported run_research")
+    # Try importing from agent directory first (cleaner path)
+    try:
+        from agent.research_agent import run_research
+        logger.info("Successfully imported run_research from agent.research_agent")
+    except ImportError:
+        # Fall back to pages.agent path
+        from pages.agent.research_agent import run_research
+        logger.info("Successfully imported run_research from pages.agent.research_agent")
+        
 except Exception as e:
     import_error = f"{str(e)}\n{traceback.format_exc()}"
     logger.error(f"Failed to import run_research: {import_error}")
