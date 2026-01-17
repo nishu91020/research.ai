@@ -17,6 +17,7 @@ app.add_middleware(
 )
 
 @app.get("/api/health")
+@app.get("/")
 async def health_check():
     """Health check endpoint"""
     return JSONResponse(
