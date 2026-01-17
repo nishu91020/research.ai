@@ -84,39 +84,11 @@ class handler(BaseHTTPRequestHandler):
             
             logger.info(f"Research completed for topic: {topic}")
             
-            # Extract article
-            article_raw = result.get("article", "")
-            if isinstance(article_raw, str):
-                if article_raw.strip().startswith('[') or article_raw.strip().startswith('{'):
-                    try:
-                        parsed = json.loads(article_raw)
-                        if isinstance(parsed, list) and len(parsed) > 0:
-                            article = parsed[0].get("content", [{}])[0].get("text", article_raw)
-                        else:
-                            article = article_raw
-                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-                        article = article_raw
-                else:
-                    article = article_raw
-            else:
-                article = str(article_raw)
+            # Extract article using the same logic as researchService.py
+            article = json.loads(result.get("article", []))[0].get("content", [])[0].get("text", "")
             
-            # Extract summary
-            summary_raw = result.get("summary", "")
-            if isinstance(summary_raw, str):
-                if summary_raw.strip().startswith('[') or summary_raw.strip().startswith('{'):
-                    try:
-                        parsed = json.loads(summary_raw)
-                        if isinstance(parsed, list) and len(parsed) > 0:
-                            summary = parsed[0].get("content", [{}])[0].get("text", summary_raw)
-                        else:
-                            summary = summary_raw
-                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-                        summary = summary_raw
-                else:
-                    summary = summary_raw
-            else:
-                summary = str(summary_raw)
+            # Extract summary using the same logic as researchService.py
+            summary = json.loads(result.get("summary", []))[0].get("content", [])[0].get("text", "")
             
             # Send complete response as single JSON
             self.send_response(200)
