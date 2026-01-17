@@ -1,27 +1,20 @@
 """
 Root API endpoint for Vercel
 """
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+from http.server import BaseHTTPRequestHandler
+import json
 import os
 
-app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/api")
-async def root():
-    """Root endpoint for debugging"""
-    return JSONResponse(
-        content={
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+        self.end_headers()
+        
+        response = {
             "status": "ok", 
             "message": "Research Agent API",
             "endpoints": {
@@ -32,9 +25,14 @@ async def root():
                 "AZURE_OPENAI_ENDPOINT": "set" if os.getenv("AZURE_OPENAI_ENDPOINT") else "not set",
                 "AZURE_OPENAI_KEY": "set" if os.getenv("AZURE_OPENAI_KEY") else "not set"
             }
-        },
-        status_code=200
-    )
-
-# Vercel handler
-handler = app
+        }
+        
+        self.wfile.write(json.dumps(response).encode())
+        return
+    
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+        self.end_headers()
