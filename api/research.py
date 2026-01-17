@@ -106,7 +106,23 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.flush()
             
             # Stream article in chunks
-            article =  json.loads(result.get("article", []))[0].get("content",[])[0].get("text","")
+            article_raw = result.get("article", "")
+            # Try to parse as JSON if it looks like JSON, otherwise use as string
+            if isinstance(article_raw, str):
+                if article_raw.strip().startswith('[') or article_raw.strip().startswith('{'):
+                    try:
+                        parsed = json.loads(article_raw)
+                        if isinstance(parsed, list) and len(parsed) > 0:
+                            article = parsed[0].get("content", [{}])[0].get("text", article_raw)
+                        else:
+                            article = article_raw
+                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                        article = article_raw
+                else:
+                    article = article_raw
+            else:
+                article = str(article_raw)
+            
             chunk_size = 100
             for i in range(0, len(article), chunk_size):
                 article_chunk = json.dumps({
@@ -117,7 +133,23 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
             
             # Stream summary
-            summary = json.loads(result.get("summary", []))[0].get("content",[])[0].get("text","")
+            summary_raw = result.get("summary", "")
+            # Try to parse as JSON if it looks like JSON, otherwise use as string
+            if isinstance(summary_raw, str):
+                if summary_raw.strip().startswith('[') or summary_raw.strip().startswith('{'):
+                    try:
+                        parsed = json.loads(summary_raw)
+                        if isinstance(parsed, list) and len(parsed) > 0:
+                            summary = parsed[0].get("content", [{}])[0].get("text", summary_raw)
+                        else:
+                            summary = summary_raw
+                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                        summary = summary_raw
+                else:
+                    summary = summary_raw
+            else:
+                summary = str(summary_raw)
+            
             summary_chunk = json.dumps({
                 "type": "summary",
                 "text": summary
