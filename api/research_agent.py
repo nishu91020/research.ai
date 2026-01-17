@@ -5,17 +5,7 @@ Statistics, Electrical Engineering, and Economics. Performs in-depth analysis le
 various research websites and creates educational content.
 '''
 
-'''
-steps for building a langgraph workflow:
-1. Define the state schema using TypedDict.
-2. Initialize the LLM (AzureChatOpenAI).
-3. Define tools
-5. define each state function as node
-6. build graph - add nodes, edges
-'''
-
 import os
-# Disable langsmith tracing before any langchain imports
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["LANGCHAIN_ENDPOINT"] = ""
 os.environ["LANGCHAIN_API_KEY"] = ""
@@ -30,17 +20,14 @@ from urllib.parse import quote
 from dotenv import load_dotenv
 import sys
 
-# Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from api.azure_responses_api import ResponsesAPIChatModel
 
-# Load environment variables from .env.local - only if file exists (local dev)
 env_path = os.path.join(os.path.dirname(__file__), '..', '.env.local')
 if os.path.exists(env_path):
     load_dotenv(env_path)
 
-# Define state
 class AgentState(TypedDict):
     topic: str
     field: str
@@ -49,7 +36,6 @@ class AgentState(TypedDict):
     summary: str
     article: str
 
-# Lazy LLM initialization to avoid import-time errors
 _llm = None
 
 def get_llm():
@@ -252,7 +238,6 @@ def multi_disciplinary_research(topic: str) -> Dict[str, List[Dict]]:
 
 # ==================== Node Functions ====================
 
-# 1. Classify field
 classify_prompt = ChatPromptTemplate.from_template("""Classify the topic '{topic}' into fields like Physics, Mathematics, 
 Computer Science, Quantitative Biology, Quantitative Finance, Statistics, Electrical Engineering, and Economics, Biology and Life Sciences, 
 Medicine and Health Sciences, Social Sciences, Humanities, Law, Economics, and Business, Biomedical and Life Sciences, Science, Technology, Medicine.
@@ -264,7 +249,6 @@ def classify_field(state: AgentState) -> AgentState:
     state["field"] = field
     return state
 
-# 2 & 3. Fetch data
 def fetch_data(state: AgentState) -> AgentState:
     print(f"Fetching data for field: {state['field']}")
     field = state.get("field", "").lower()
@@ -276,7 +260,6 @@ def fetch_data(state: AgentState) -> AgentState:
         state["fetched_data"] = multi_disciplinary_research.invoke({"topic": state["topic"]})
     return state
 
-# 4. Select relevant articles
 select_prompt = ChatPromptTemplate.from_template(
     "From these articles: {articles}\nSelect the top 3 most relevant to '{topic}'. Output as JSON list: [{{title, url, reason}}]"
 )
@@ -297,7 +280,6 @@ def select_relevant(state: AgentState) -> AgentState:
         state["selected_artices"] = []
     return state
 
-# 5. Summarize findings
 summary_prompt = ChatPromptTemplate.from_template("""Based on the articles: {articles}
 
 Summarize the key findings on the topic '{topic}' in a clear and concise manner.
@@ -312,7 +294,6 @@ def summarise(state: AgentState) -> AgentState:
     state["summary"] = summary_chain.invoke({"articles": state["selected_artices"], "topic": state["topic"]}).content
     return state
 
-# 6. Draft article
 article_draft_prompt = ChatPromptTemplate.from_template("""Draft a comprehensive article on the topic '{topic}' using the summary: {summary}
 
 Format the article with proper Markdown syntax:
