@@ -28,7 +28,7 @@ import sys
 # Add parent directory to path to import services
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from services.azure_responses_api import ResponsesAPIChatModel
+from pages.api.azure_responses_api import ResponsesAPIChatModel
 
 # Load environment variables from .env.local
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.local'))

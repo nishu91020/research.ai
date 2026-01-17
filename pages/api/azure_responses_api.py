@@ -17,16 +17,23 @@ if os.path.exists(env_path):
 AZURE_OPENAI_ENDPOINT = os.getenv('AZURE_OPENAI_ENDPOINT')
 AZURE_OPENAI_KEY = os.getenv('AZURE_OPENAI_KEY')
 
+# Don't raise error at import time - allow initialization to defer to runtime
+# This allows the module to import successfully even if env vars aren't set yet
 if not AZURE_OPENAI_ENDPOINT or not AZURE_OPENAI_KEY:
-    raise ValueError("Azure OpenAI credentials not found. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY environment variables.")
+    import warnings
+    warnings.warn("Azure OpenAI credentials not found. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY environment variables.")
 
 
 class AzureResponsesAPIClient:
     """Client for Azure OpenAI Responses API"""
     
     def __init__(self):
-        self.endpoint = AZURE_OPENAI_ENDPOINT
-        self.api_key = AZURE_OPENAI_KEY
+        self.endpoint = AZURE_OPENAI_ENDPOINT or os.getenv('AZURE_OPENAI_ENDPOINT')
+        self.api_key = AZURE_OPENAI_KEY or os.getenv('AZURE_OPENAI_KEY')
+        
+        if not self.endpoint or not self.api_key:
+            raise ValueError("Azure OpenAI credentials not found. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY environment variables.")
+        
         self.headers = {
             "api-key": self.api_key,
             "Content-Type": "application/json"
