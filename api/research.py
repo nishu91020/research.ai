@@ -84,11 +84,35 @@ class handler(BaseHTTPRequestHandler):
             
             logger.info(f"Research completed for topic: {topic}")
             
-            # Extract article using the same logic as researchService.py
-            article = json.loads(result.get("article", []))[0].get("content", [])[0].get("text", "")
+            # Extract article - try to parse as JSON first
+            article_raw = result.get("article", "")
+            try:
+                # Try to parse as JSON and extract nested text field
+                parsed_article = json.loads(article_raw)
+                if isinstance(parsed_article, list) and len(parsed_article) > 0:
+                    article = parsed_article[0].get("content", [])[0].get("text", article_raw)
+                elif isinstance(parsed_article, dict):
+                    article = parsed_article.get("content", [{}])[0].get("text", article_raw)
+                else:
+                    article = article_raw
+            except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                # If it's not JSON or parsing fails, use as plain string
+                article = article_raw
             
-            # Extract summary using the same logic as researchService.py
-            summary = json.loads(result.get("summary", []))[0].get("content", [])[0].get("text", "")
+            # Extract summary - try to parse as JSON first
+            summary_raw = result.get("summary", "")
+            try:
+                # Try to parse as JSON and extract nested text field
+                parsed_summary = json.loads(summary_raw)
+                if isinstance(parsed_summary, list) and len(parsed_summary) > 0:
+                    summary = parsed_summary[0].get("content", [])[0].get("text", summary_raw)
+                elif isinstance(parsed_summary, dict):
+                    summary = parsed_summary.get("content", [{}])[0].get("text", summary_raw)
+                else:
+                    summary = summary_raw
+            except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                # If it's not JSON or parsing fails, use as plain string
+                summary = summary_raw
             
             # Send complete response as single JSON
             self.send_response(200)
