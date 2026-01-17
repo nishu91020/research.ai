@@ -298,7 +298,14 @@ def select_relevant(state: AgentState) -> AgentState:
     return state
 
 # 5. Summarize findings
-summary_prompt = ChatPromptTemplate.from_template("from the articles {articles} summarize the key findings on the topic {topic}, keep it clean and concise")
+summary_prompt = ChatPromptTemplate.from_template("""Based on the articles: {articles}
+
+Summarize the key findings on the topic '{topic}' in a clear and concise manner.
+
+Format using Markdown:
+- Use **bold** for key terms
+- Use bullet points for listing findings
+- Keep it well-structured and informative""")
 
 def summarise(state: AgentState) -> AgentState:
     summary_chain = summary_prompt | get_llm()
@@ -306,7 +313,18 @@ def summarise(state: AgentState) -> AgentState:
     return state
 
 # 6. Draft article
-article_draft_prompt = ChatPromptTemplate.from_template("Draft an article with the summary {summary} on the topic {topic} with clean heading and subheadings, including hashtags for the key terms used")
+article_draft_prompt = ChatPromptTemplate.from_template("""Draft a comprehensive article on the topic '{topic}' using the summary: {summary}
+
+Format the article with proper Markdown syntax:
+- Use # for main title
+- Use ## for major sections
+- Use ### for subsections
+- Use **bold** for emphasis
+- Use bullet points with - or *
+- Use numbered lists where appropriate
+- Include relevant hashtags at the end
+
+Make it well-structured, informative, and easy to read.""")
 
 def draft(state: AgentState) -> AgentState:
     article_draft_chain = article_draft_prompt | get_llm()
