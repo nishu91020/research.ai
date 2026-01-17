@@ -106,7 +106,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.flush()
             
             # Stream article in chunks
-            article = json.loads(result.get("article", ""))[0].get("content", [{}])[0].get("text", "")
+            article = result.get("article", "")
             chunk_size = 100
             for i in range(0, len(article), chunk_size):
                 article_chunk = json.dumps({
@@ -117,7 +117,7 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
             
             # Stream summary
-            summary = json.loads(result.get("summary", ""))[0].get("content", [{}])[0].get("text", "")
+            summary = result.get("summary", "")
             summary_chunk = json.dumps({
                 "type": "summary",
                 "text": summary
