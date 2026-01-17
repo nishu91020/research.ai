@@ -42,8 +42,15 @@ class AgentState(TypedDict):
     summary: str
     article: str
 
-# Initialize LLM with the Responses API client
-llm = ResponsesAPIChatModel(model="gpt-4.1")
+# Lazy LLM initialization to avoid import-time errors
+_llm = None
+
+def get_llm():
+    """Get or initialize the LLM instance"""
+    global _llm
+    if _llm is None:
+        _llm = ResponsesAPIChatModel(model="gpt-5-mini")
+    return _llm
 
 # ==================== Tools ====================
 
@@ -244,9 +251,8 @@ Computer Science, Quantitative Biology, Quantitative Finance, Statistics, Electr
 Medicine and Health Sciences, Social Sciences, Humanities, Law, Economics, and Business, Biomedical and Life Sciences, Science, Technology, Medicine.
 output only the field name""")
 
-classify_chain = classify_prompt | llm
-
 def classify_field(state: AgentState) -> AgentState:
+    classify_chain = classify_prompt | get_llm()
     field = classify_chain.invoke({"topic": state["topic"]}).content.strip().lower()
     state["field"] = field
     return state
@@ -267,9 +273,9 @@ def fetch_data(state: AgentState) -> AgentState:
 select_prompt = ChatPromptTemplate.from_template(
     "From these articles: {articles}\nSelect the top 3 most relevant to '{topic}'. Output as JSON list: [{{title, url, reason}}]"
 )
-select_chain = select_prompt | llm
 
 def select_relevant(state: AgentState) -> AgentState:
+    select_chain = select_prompt | get_llm()
     all_articles = []
     for source, article in state["fetched_data"].items():
         if isinstance(article, list):
@@ -286,17 +292,17 @@ def select_relevant(state: AgentState) -> AgentState:
 
 # 5. Summarize findings
 summary_prompt = ChatPromptTemplate.from_template("from the articles {articles} summarize the key findings on the topic {topic}, keep it clean and concise")
-summary_chain = summary_prompt | llm
 
 def summarise(state: AgentState) -> AgentState:
+    summary_chain = summary_prompt | get_llm()
     state["summary"] = summary_chain.invoke({"articles": state["selected_artices"], "topic": state["topic"]}).content
     return state
 
 # 6. Draft article
 article_draft_prompt = ChatPromptTemplate.from_template("Draft an article with the summary {summary} on the topic {topic} with clean heading and subheadings, including hashtags for the key terms used")
-article_draft_chain = article_draft_prompt | llm
 
 def draft(state: AgentState) -> AgentState:
+    article_draft_chain = article_draft_prompt | get_llm()
     state["article"] = article_draft_chain.invoke({"summary": state["summary"], "topic": state["topic"]}).content
     return state
 

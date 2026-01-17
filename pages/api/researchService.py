@@ -72,8 +72,6 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
-    allow_headers=["*"],  # Allow all headers
-)
 
 # ==================== Endpoints ====================
 
