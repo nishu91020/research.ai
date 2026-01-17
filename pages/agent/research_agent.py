@@ -20,7 +20,7 @@ os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["LANGCHAIN_ENDPOINT"] = ""
 os.environ["LANGCHAIN_API_KEY"] = ""
 
-from langgraph.graph import StateGraph, END, START
+from langgraph.graph import StateGraph, END
 from typing import Dict, List, TypedDict
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.tools import tool
@@ -326,8 +326,8 @@ def build_research_graph():
     workflow.add_node("summarise", summarise)
     workflow.add_node("draft", draft)
     
-    # Add edges
-    workflow.add_edge(START, "classify")
+    # Set entry point and add edges
+    workflow.set_entry_point("classify")
     workflow.add_edge("classify", "fetch")
     workflow.add_edge("fetch", "select")
     workflow.add_edge("select", "summarise")
