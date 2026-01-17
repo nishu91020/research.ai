@@ -106,14 +106,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.flush()
             
             # Stream article in chunks
-            article = result.get("article", "")
-            if isinstance(article, list):
-                # Handle if article is in langchain message format
-                try:
-                    article = json.loads(article)[0].get("content", [{}])[0].get("text", "")
-                except:
-                    article = str(article)
-            
+            article = result.get("article", "")[0].get("content", [{}])[0].get("text", "")
             chunk_size = 100
             for i in range(0, len(article), chunk_size):
                 article_chunk = json.dumps({
@@ -124,14 +117,7 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
             
             # Stream summary
-            summary = result.get("summary", "")
-            if isinstance(summary, list):
-                # Handle if summary is in langchain message format
-                try:
-                    summary = json.loads(summary)[0].get("content", [{}])[0].get("text", "")
-                except:
-                    summary = str(summary)
-                    
+            summary = result.get("summary", "")[0].get("content", [{}])[0].get("text", "")
             summary_chunk = json.dumps({
                 "type": "summary",
                 "text": summary
