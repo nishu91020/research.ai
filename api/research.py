@@ -27,8 +27,13 @@ run_research = None
 import_error = None
 
 try:
+    logger.info(f"Python path: {sys.path}")
+    logger.info(f"Current directory: {os.getcwd()}")
+    
+    # Import from api directory (same directory)
     from api.research_agent import run_research
-    logger.info("Successfully imported run_research")
+    logger.info("Successfully imported run_research from api.research_agent")
+        
 except Exception as e:
     import_error = f"{str(e)}\n{traceback.format_exc()}"
     logger.error(f"Failed to import run_research: {import_error}")
