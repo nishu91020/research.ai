@@ -18,7 +18,6 @@ app.add_middleware(
 )
 
 @app.get("/api")
-@app.get("/")
 async def root():
     """Root endpoint for debugging"""
     return JSONResponse(
