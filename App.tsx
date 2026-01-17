@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sidebar } from './pages/components/Sidebar';
-import { MessageBubble } from './pages/components/MessageBubble';
-import { ChatInput } from './pages/components/ChatInput';
+import { Sidebar } from './components/Sidebar';
+import { MessageBubble } from './components/MessageBubble';
+import { ChatInput } from './components/ChatInput';
 import { ChatSession, Message, Role, ChatState } from './types';
 import { v4 as uuidv4 } from 'uuid'; 
 
@@ -113,9 +113,7 @@ const App: React.FC = () => {
     }));
 
     try {
-        console.log("Starting research for:", text);
         const encodedTopic = encodeURIComponent(text);
-        // Use /api for production (relative path works on Vercel)
         const apiBaseUrl = '/api';
         const response = await fetch(`${apiBaseUrl}/research/${encodedTopic}`);
         
@@ -123,17 +121,14 @@ const App: React.FC = () => {
             throw new Error(`Research failed: ${response.statusText}`);
         }
 
-        // Parse the complete JSON response
         const data = await response.json();
         
         if (data.error) {
             throw new Error(data.detail || data.error);
         }
 
-        // Combine article and summary
         const fullText = data.article + "\n\n---\n\n## Summary\n\n" + data.summary;
         
-        // Update the message with complete response
         setChatState(prev => ({
             ...prev,
             sessions: prev.sessions.map(s => {
@@ -144,11 +139,7 @@ const App: React.FC = () => {
                                 ...m,
                                 text: fullText,
                                 isStreaming: false,
-                                groundingMetadata: {
-                                    field: data.field,
-                                    fetched_data: data.fetched_data,
-                                    selected_articles: data.selected_articles
-                                }
+                                groundingMetadata: null
                             };
                         }
                         return m;

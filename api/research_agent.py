@@ -1,21 +1,11 @@
-'''Research Scholar Agent
+"""Research Scholar Agent
 Proficient in researching any topics from varied fields like medicine, technology,
 Physics, Mathematics, Computer Science, Quantitative Biology, Quantitative Finance, 
 Statistics, Electrical Engineering, and Economics. Performs in-depth analysis leveraging 
 various research websites and creates educational content.
-'''
-
-'''
-steps for building a langgraph workflow:
-1. Define the state schema using TypedDict.
-2. Initialize the LLM (AzureChatOpenAI).
-3. Define tools
-5. define each state function as node
-6. build graph - add nodes, edges
-'''
+"""
 
 import os
-# Disable langsmith tracing before any langchain imports
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["LANGCHAIN_ENDPOINT"] = ""
 os.environ["LANGCHAIN_API_KEY"] = ""
@@ -30,12 +20,8 @@ from urllib.parse import quote
 from dotenv import load_dotenv
 import sys
 
-# Add parent directory to path to import from api
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 from api.azure_responses_api import ResponsesAPIChatModel
 
-# Load environment variables from .env.local - only if file exists (local dev)
 env_path = os.path.join(os.path.dirname(__file__), '..', '.env.local')
 if os.path.exists(env_path):
     load_dotenv(env_path)
