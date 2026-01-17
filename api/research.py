@@ -5,6 +5,12 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import sys
 import os
+
+# Disable langsmith tracing to avoid pydantic v1 compatibility issues
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGCHAIN_ENDPOINT"] = ""
+os.environ["LANGCHAIN_API_KEY"] = ""
+
 import json
 import logging
 import traceback

@@ -14,6 +14,12 @@ steps for building a langgraph workflow:
 6. build graph - add nodes, edges
 '''
 
+import os
+# Disable langsmith tracing before any langchain imports
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGCHAIN_ENDPOINT"] = ""
+os.environ["LANGCHAIN_API_KEY"] = ""
+
 from langgraph.graph import StateGraph, END, START
 from typing import Dict, List, TypedDict
 from langchain_core.prompts import ChatPromptTemplate
@@ -21,7 +27,6 @@ from langchain.tools import tool
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
-import os
 from dotenv import load_dotenv
 import sys
 
