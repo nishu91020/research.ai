@@ -84,34 +84,48 @@ class handler(BaseHTTPRequestHandler):
             
             logger.info(f"Research completed for topic: {topic}")
             
-            # Extract article - try to parse as JSON first
+            # Extract article - parse Azure Responses API format
             article_raw = result.get("article", "")
             try:
-                # Try to parse as JSON and extract nested text field
                 parsed_article = json.loads(article_raw)
-                if isinstance(parsed_article, list) and len(parsed_article) > 0:
-                    article = parsed_article[0].get("content", [])[0].get("text", article_raw)
-                elif isinstance(parsed_article, dict):
-                    article = parsed_article.get("content", [{}])[0].get("text", article_raw)
+                if isinstance(parsed_article, list):
+                    # Find the message object in the array
+                    for item in parsed_article:
+                        if isinstance(item, dict) and item.get("type") == "message":
+                            content = item.get("content", [])
+                            if content and len(content) > 0:
+                                for content_item in content:
+                                    if content_item.get("type") == "output_text":
+                                        article = content_item.get("text", article_raw)
+                                        break
+                                break
+                    else:
+                        article = article_raw
                 else:
                     article = article_raw
             except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-                # If it's not JSON or parsing fails, use as plain string
                 article = article_raw
             
-            # Extract summary - try to parse as JSON first
+            # Extract summary - parse Azure Responses API format
             summary_raw = result.get("summary", "")
             try:
-                # Try to parse as JSON and extract nested text field
                 parsed_summary = json.loads(summary_raw)
-                if isinstance(parsed_summary, list) and len(parsed_summary) > 0:
-                    summary = parsed_summary[0].get("content", [])[0].get("text", summary_raw)
-                elif isinstance(parsed_summary, dict):
-                    summary = parsed_summary.get("content", [{}])[0].get("text", summary_raw)
+                if isinstance(parsed_summary, list):
+                    # Find the message object in the array
+                    for item in parsed_summary:
+                        if isinstance(item, dict) and item.get("type") == "message":
+                            content = item.get("content", [])
+                            if content and len(content) > 0:
+                                for content_item in content:
+                                    if content_item.get("type") == "output_text":
+                                        summary = content_item.get("text", summary_raw)
+                                        break
+                                break
+                    else:
+                        summary = summary_raw
                 else:
                     summary = summary_raw
             except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-                # If it's not JSON or parsing fails, use as plain string
                 summary = summary_raw
             
             # Send complete response as single JSON
