@@ -310,7 +310,7 @@ def draft(state: AgentState) -> AgentState:
 
 def build_research_graph():
     """Build and return the research workflow graph"""
-    workflow = StateGraph(state_schema=AgentState)
+    workflow = StateGraph(AgentState)
     
     # Add nodes
     workflow.add_node("classify", classify_field)
