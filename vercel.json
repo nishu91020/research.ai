@@ -14,7 +14,7 @@
   ],
   "routes": [
     {
-      "src": "/api/research/(.*)",
+      "src": "/api/(.*)",
       "dest": "api/research.py"
     },
     {
