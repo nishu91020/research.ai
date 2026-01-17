@@ -4,7 +4,7 @@
   "outputDirectory": "dist",
   "builds": [
     {
-      "src": "api/research.py",
+      "src": "api/*.py",
       "use": "@vercel/python"
     },
     {
@@ -14,8 +14,16 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "/api/health",
+      "dest": "api/health.py"
+    },
+    {
+      "src": "/api/research/(.+)",
       "dest": "api/research.py"
+    },
+    {
+      "src": "/api/?",
+      "dest": "api/index.py"
     },
     {
       "handle": "filesystem"

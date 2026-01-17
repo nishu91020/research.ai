@@ -49,27 +49,8 @@ except Exception as e:
     import_error = f"{str(e)}\n{traceback.format_exc()}"
     logger.error(f"Failed to import run_research: {import_error}")
 
-@app.get("/")
-async def root():
-    """Root endpoint for debugging"""
-    return {
-        "status": "ok", 
-        "message": "Research Agent API",
-        "import_status": "success" if run_research else "failed",
-        "import_error": import_error,
-        "cwd": os.getcwd(),
-        "env_vars": {
-            "AZURE_OPENAI_ENDPOINT": "set" if os.getenv("AZURE_OPENAI_ENDPOINT") else "not set",
-            "AZURE_OPENAI_KEY": "set" if os.getenv("AZURE_OPENAI_KEY") else "not set"
-        }
-    }
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "ok", "service": "Research Scholar Agent API"}
-
-@app.get("/research/{topic}")
+@app.get("/api/research/{topic}")
 async def research_endpoint(topic: str):
     """Research endpoint with streaming response"""
     
