@@ -79,42 +79,93 @@ class handler(BaseHTTPRequestHandler):
             
             logger.info(f"Starting research for topic: {topic}")
             
+            # Send streaming response headers
+            self.send_response(200)
+            self.send_header('Content-type', 'application/x-ndjson')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', '*')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Connection', 'keep-alive')
+            self.end_headers()
+            
             # Run the research workflow
             result = run_research(topic)
             
             logger.info(f"Research completed for topic: {topic}")
             
-            # Send successful response
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-            self.send_header('Access-Control-Allow-Headers', '*')
-            self.end_headers()
-            
-            # Format response
-            response = {
+            # Stream metadata
+            metadata_chunk = json.dumps({
+                "type": "metadata",
                 "topic": topic,
                 "field": result.get("field", ""),
                 "fetched_data": result.get("fetched_data", {}),
-                "selected_articles": result.get("selected_articles", []),
-                "article": result.get("article", ""),
-                "summary": result.get("summary", "")
-            }
+                "selected_articles": result.get("selected_articles", [])
+            }) + "\n"
+            self.wfile.write(metadata_chunk.encode())
+            self.wfile.flush()
             
-            self.wfile.write(json.dumps(response).encode())
+            # Stream article in chunks
+            article = result.get("article", "")
+            if isinstance(article, list):
+                # Handle if article is in langchain message format
+                try:
+                    article = json.loads(article)[0].get("content", [{}])[0].get("text", "")
+                except:
+                    article = str(article)
+            
+            chunk_size = 100
+            for i in range(0, len(article), chunk_size):
+                article_chunk = json.dumps({
+                    "type": "article",
+                    "text": article[i:i + chunk_size]
+                }) + "\n"
+                self.wfile.write(article_chunk.encode())
+                self.wfile.flush()
+            
+            # Stream summary
+            summary = result.get("summary", "")
+            if isinstance(summary, list):
+                # Handle if summary is in langchain message format
+                try:
+                    summary = json.loads(summary)[0].get("content", [{}])[0].get("text", "")
+                except:
+                    summary = str(summary)
+                    
+            summary_chunk = json.dumps({
+                "type": "summary",
+                "text": summary
+            }) + "\n"
+            self.wfile.write(summary_chunk.encode())
+            self.wfile.flush()
+            
+            # Send completion
+            complete_chunk = json.dumps({"type": "complete"}) + "\n"
+            self.wfile.write(complete_chunk.encode())
+            self.wfile.flush()
             
         except Exception as e:
             error_detail = f"{str(e)}\n{traceback.format_exc()}"
             logger.error(f"Error during research: {error_detail}")
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({
-                "error": "Error during research",
-                "detail": str(e)
-            }).encode())
+            
+            try:
+                # Try to send error as streaming chunk
+                error_chunk = json.dumps({
+                    "type": "error",
+                    "message": str(e)
+                }) + "\n"
+                self.wfile.write(error_chunk.encode())
+                self.wfile.flush()
+            except:
+                # If headers not sent yet, send as regular error
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "error": "Error during research",
+                    "detail": str(e)
+                }).encode())
     
     def do_OPTIONS(self):
         self.send_response(200)
